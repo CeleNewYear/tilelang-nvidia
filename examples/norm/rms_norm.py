@@ -65,12 +65,19 @@ def ref_program(x):
 
 if __name__ == "__main__":
     M, N, blk_m, blk_k = 8192, 8192, 1, 512
-    kernel = rms_norm(M, N, blk_m)
-    profiler = kernel.get_profiler()
-    profiler.assert_allclose(ref_program, rtol=0.01, atol=0.01)
-    print("All checks pass.")
+    from tilelang.engine.lower import lower
+    from tvm.target import Target
 
-    latency = profiler.do_bench(ref_program, warmup=500)
-    print("Ref: {:.2f} ms".format(latency))
-    latency = profiler.do_bench(warmup=500)
-    print("Tile-lang: {:.2f} ms".format(latency))
+    target = Target("cuda -arch=sm_80")
+    with target:
+        compiled = lower(rms_norm_splitk(M, N, blk_m, blk_k), target=target)
+    print(compiled.kernel_source)
+    # kernel = rms_norm(M, N, blk_m)
+    # profiler = kernel.get_profiler()
+    # profiler.assert_allclose(ref_program, rtol=0.01, atol=0.01)
+    # print("All checks pass.")
+
+    # latency = profiler.do_bench(ref_program, warmup=500)
+    # print("Ref: {:.2f} ms".format(latency))
+    # latency = profiler.do_bench(warmup=500)
+    # print("Tile-lang: {:.2f} ms".format(latency))
